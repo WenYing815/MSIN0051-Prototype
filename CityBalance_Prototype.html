@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CityBalance by Airbnb — Prototype</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;background:#F7F7F7;display:flex;flex-direction:column;align-items:center;min-height:100vh}
+.header{text-align:center;padding:20px 20px 4px}
+.header h1{font-size:22px;font-weight:700;color:#222;display:inline-flex;align-items:center;gap:8px}
+.header p{font-size:13px;color:#717171;margin-top:2px}
+.phone{width:375px;min-height:740px;background:#fff;border-radius:44px;border:6px solid #1a1a1a;position:relative;overflow:hidden;box-shadow:0 30px 90px rgba(0,0,0,.25),inset 0 0 0 1px rgba(0,0,0,.1);margin:16px 0}
+.notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:126px;height:30px;background:#1a1a1a;border-radius:0 0 18px 18px;z-index:20}
+.home-bar{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;background:#1a1a1a;border-radius:3px;z-index:20}
+.screen-wrap{height:100%;overflow-y:auto;overflow-x:hidden}
+.screen{display:none}
+.screen.active{display:block}
+.status{display:flex;justify-content:space-between;padding:14px 28px 6px;font-size:14px;font-weight:600;color:#222}
+.tab-bar{display:flex;justify-content:space-around;padding:8px 0 30px;border-top:1px solid #ddd;background:#fff;position:sticky;bottom:0}
+.tab-bar .tab{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;border:none;background:none;font-family:inherit}
+.tab-bar .tab svg{width:24px;height:24px}
+.tab-bar .tab span{font-size:10px;font-weight:500;color:#717171}
+.tab-bar .tab.active span{color:#FF385C}
+.search-bar{display:flex;align-items:center;gap:12px;padding:10px 16px;border:1px solid #ddd;border-radius:40px;box-shadow:0 2px 12px rgba(0,0,0,.08);margin:6px 24px 16px}
+.search-bar .icon{color:#FF385C}
+.search-bar .text h3{font-size:13px;font-weight:600;color:#222;margin:0}
+.search-bar .text p{font-size:12px;color:#717171;margin:0}
+.crowd-alert{background:#FFF1F2;border-radius:16px;padding:14px 16px;border:1px solid #FFE4E6;margin:0 24px 16px}
+.crowd-alert .header-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.crowd-alert .dot{width:8px;height:8px;border-radius:4px;background:#FF385C}
+.crowd-alert .title{font-size:14px;font-weight:600;color:#222}
+.crowd-alert .time{font-size:11px;color:#717171;margin-left:auto}
+.crowd-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.crowd-row:last-child{margin-bottom:0}
+.crowd-row .name{font-size:13px;color:#222;width:120px;flex-shrink:0}
+.crowd-row .bar{flex:1;height:4px;border-radius:2px;background:#F3F4F6}
+.crowd-row .bar-fill{height:100%;border-radius:2px;transition:width .6s}
+.crowd-row .status-text{font-size:12px;font-weight:600;width:90px;text-align:right}
+.section-title{padding:0 24px;font-size:22px;font-weight:700;color:#222;margin-bottom:4px}
+.section-sub{padding:0 24px;font-size:14px;color:#717171;margin-bottom:16px}
+.card{padding:0 24px 20px;cursor:pointer}
+.card-img{width:100%;height:200px;border-radius:16px;background:#F7F7F7;overflow:hidden;position:relative}
+.card-img img{width:100%;height:100%;object-fit:cover}
+.card-badge{position:absolute;top:12px;padding:5px 10px;border-radius:20px;background:#fff;font-size:12px;font-weight:600;box-shadow:0 2px 4px rgba(0,0,0,.1)}
+.card-badge.left{left:12px;color:#008A05}
+.card-badge.right{right:12px;color:#FF385C}
+.card-info{margin-top:8px}
+.card-info .row{display:flex;justify-content:space-between;align-items:center}
+.card-info .name{font-size:16px;font-weight:600;color:#222}
+.card-info .tagline{font-size:14px;color:#717171;margin-top:2px}
+.card-info .meta{font-size:14px;color:#717171}
+.card-info .savings{color:#008A05;font-weight:500}
+.star{display:inline-flex;align-items:center;gap:3px;font-size:13px;color:#222}
+.star svg{width:12px;height:12px}
+.star .count{color:#717171}
+.filters{display:flex;gap:8px;padding:0 24px 16px;overflow-x:auto}
+.filters span{padding:8px 16px;border-radius:20px;font-size:13px;font-weight:500;white-space:nowrap;cursor:pointer;border:1px solid #ddd;background:#fff;color:#222}
+.filters span.active{background:#222;color:#fff;border-color:#222}
+.list-item{display:flex;gap:14px;padding:0 24px 16px;cursor:pointer}
+.list-item .thumb{width:110px;height:110px;border-radius:14px;background:#F7F7F7;overflow:hidden;flex-shrink:0}
+.list-item .thumb img{width:100%;height:100%;object-fit:cover}
+.list-item .info{flex:1;min-width:0;padding-top:2px}
+.list-item .info .name{font-size:15px;font-weight:600}
+.list-item .info .tagline{font-size:13px;color:#717171;margin-top:2px}
+.list-item .info .meta{font-size:13px;color:#717171;margin-top:4px}
+.crowd-badge{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600}
+.crowd-badge .dot{width:6px;height:6px;border-radius:3px;display:inline-block}
+.detail-hero{width:100%;height:260px;background:#F7F7F7;position:relative;overflow:hidden}
+.detail-hero img{width:100%;height:100%;object-fit:cover}
+.back-btn{position:absolute;top:48px;left:16px;width:36px;height:36px;border-radius:18px;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.15);border:none}
+.detail-body{padding:16px 24px 0}
+.detail-body h1{font-size:24px;font-weight:700;color:#222}
+.detail-body .tagline{font-size:15px;color:#717171;margin-top:2px}
+.detail-body .desc{font-size:15px;color:#222;line-height:1.6;margin-top:16px;padding-top:16px;border-top:1px solid #ddd}
+.stats-row{display:flex;margin-top:16px;border-top:1px solid #ddd;border-bottom:1px solid #ddd}
+.stats-row .stat{flex:1;padding:16px 0;text-align:center;border-right:1px solid #ddd}
+.stats-row .stat:last-child{border-right:none}
+.stats-row .stat .val{font-size:18px;font-weight:700}
+.stats-row .stat .label{font-size:12px;color:#717171;margin-top:2px}
+.tag-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.tag-row span{padding:6px 14px;border-radius:20px;border:1px solid #ddd;font-size:13px;color:#222}
+.tag-row .green{background:#F0FDF4;border-color:#BBF7D0;color:#008A05;font-weight:500}
+.sdg-box{margin-top:20px;background:#F0F7FF;border-radius:16px;padding:16px;border:1px solid #DBEAFE}
+.sdg-box .title{font-size:14px;font-weight:600;color:#1E40AF;display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.sdg-box .text{font-size:13px;color:#334155;line-height:1.6}
+.btn-row{display:flex;gap:12px;margin-top:20px;padding-bottom:24px}
+.btn-row .btn{flex:1;padding:14px 0;border-radius:12px;text-align:center;cursor:pointer;font-size:15px;font-weight:600;border:none;font-family:inherit}
+.btn-row .btn.outline{border:1px solid #222;background:#fff;color:#222}
+.btn-row .btn.primary{background:linear-gradient(to right,#E61E4D,#BD1E59);color:#fff}
+#map-container{margin:0 16px;height:400px;border-radius:20px;overflow:hidden;border:1px solid #ddd;position:relative}
+#barcelona-map{width:100%;height:100%;z-index:1}
+.map-legend{padding:12px 24px}
+.map-legend .row{display:flex;gap:20px;justify-content:center;margin-bottom:12px}
+.map-legend .item{display:flex;align-items:center;gap:6px;font-size:12px;color:#717171}
+.map-legend .item .dot{width:10px;height:10px;border-radius:5px}
+.map-iot{background:#F7F7F7;border-radius:12px;padding:10px 16px;text-align:center;border:1px solid #ddd;font-size:13px;color:#717171}
+.map-iot b{color:#FF385C;font-weight:600}
+.ar-viewport{margin:0 16px;height:320px;border-radius:20px;background:#1a1a1a;position:relative;overflow:hidden}
+.ar-viewport .cam-bg{position:absolute;inset:0;background:linear-gradient(135deg,#2a2a2a,#1a1a1a);display:flex;align-items:center;justify-content:center}
+.ar-viewport .frame{width:180px;height:180px;border:2px solid rgba(255,255,255,.25);border-radius:16px;position:relative}
+.ar-viewport .corner{position:absolute;width:20px;height:20px}
+.ar-viewport .tl{top:-1px;left:-1px;border-top:3px solid #FF385C;border-left:3px solid #FF385C}
+.ar-viewport .tr{top:-1px;right:-1px;border-top:3px solid #FF385C;border-right:3px solid #FF385C}
+.ar-viewport .bl{bottom:-1px;left:-1px;border-bottom:3px solid #FF385C;border-left:3px solid #FF385C}
+.ar-viewport .br{bottom:-1px;right:-1px;border-bottom:3px solid #FF385C;border-right:3px solid #FF385C}
+.ar-badge{position:absolute;top:14px;left:14px;background:rgba(0,0,0,.6);border-radius:20px;padding:5px 12px;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#fff}
+.ar-badge .dot{width:6px;height:6px;border-radius:3px;background:#FF385C}
+.ar-info{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.85));padding:30px 16px 16px}
+.ar-info h3{font-size:16px;font-weight:700;color:#fff}
+.ar-info p{font-size:12px;color:rgba(255,255,255,.7);margin-top:4px}
+.ar-info .tags{display:flex;gap:8px;margin-top:8px}
+.ar-info .tags span{font-size:11px;padding:3px 10px;border-radius:12px}
+.heritage-list{padding:16px 24px}
+.heritage-list h3{font-size:16px;font-weight:600;margin-bottom:12px;color:#222}
+.heritage-item{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid #F3F4F6}
+.heritage-item:last-child{border-bottom:none}
+.heritage-item .name{font-size:14px;font-weight:500;color:#222}
+.heritage-item .type{font-size:12px;color:#717171}
+.nav-btns{display:flex;gap:6px;padding:0 0 20px;flex-wrap:wrap;justify-content:center}
+.nav-btns button{padding:8px 18px;border-radius:24px;cursor:pointer;font-size:13px;font-weight:600;border:none;background:#fff;color:#222;box-shadow:0 1px 4px rgba(0,0,0,.08);font-family:inherit;transition:all .2s}
+.nav-btns button.active{background:linear-gradient(to right,#E61E4D,#BD1E59);color:#fff}
+.leaflet-control-attribution{font-size:8px!important;opacity:.6}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>
+    <svg width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#FF385C"/><path d="M16 8c-2.2 0-4 1.8-4 4 0 2.4 2 4.6 4 6.4 2-1.8 4-4 4-6.4 0-2.2-1.8-4-4-4z" fill="#fff"/></svg>
+    CityBalance
+  </h1>
+  <p>by Airbnb · Powered by AI for SDG 11</p>
+</div>
+
+<div class="phone">
+  <div class="notch"></div>
+  <div class="screen-wrap">
+
+    <!-- HOME -->
+    <div class="screen active" id="s-home">
+      <div class="status"><span>9:41</span><span>⚡</span></div>
+      <div class="search-bar">
+        <svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF385C" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+        <div class="text"><h3>Barcelona</h3><p>Explore sustainable alternatives</p></div>
+      </div>
+      <div class="crowd-alert">
+        <div class="header-row"><div class="dot"></div><span class="title">Live crowd levels</span><span class="time">Updated now</span></div>
+        <div class="crowd-row"><span class="name">La Rambla</span><div class="bar"><div class="bar-fill" style="width:92%;background:#FF385C"></div></div><span class="status-text" style="color:#FF385C">Overcrowded</span></div>
+        <div class="crowd-row"><span class="name">Sagrada Família</span><div class="bar"><div class="bar-fill" style="width:87%;background:#E07912"></div></div><span class="status-text" style="color:#E07912">Very busy</span></div>
+        <div class="crowd-row"><span class="name">Park Güell</span><div class="bar"><div class="bar-fill" style="width:74%;background:#E07912"></div></div><span class="status-text" style="color:#E07912">Busy</span></div>
+        <div class="crowd-row"><span class="name">Gothic Quarter</span><div class="bar"><div class="bar-fill" style="width:81%;background:#FF385C"></div></div><span class="status-text" style="color:#FF385C">Very busy</span></div>
+      </div>
+      <div class="section-title">AI-recommended for you</div>
+      <div class="section-sub">Less crowded, culturally rich neighbourhoods</div>
+      <div class="card" onclick="go('detail',0)">
+        <div class="card-img"><img src="https://images.unsplash.com/photo-1583422409516-2895a77efded?w=400&h=300&fit=crop" onerror="this.style.display='none'"><div class="card-badge left">23% capacity</div><div class="card-badge right">94% match</div></div>
+        <div class="card-info"><div class="row"><span class="name">Poblenou</span><span class="star"><svg viewBox="0 0 12 12" fill="#222"><path d="M6 0l1.76 3.57L12 4.14 8.88 7.02l.74 4.32L6 9.27 2.38 11.34l.74-4.32L0 4.14l4.24-.57z"/></svg><b>4.91</b><span class="count">(2,847)</span></span></div><div class="tagline">Barcelona's creative district</div><div class="meta">15 min by metro · <span class="savings">40% cheaper dining</span></div></div>
+      </div>
+      <div class="card" onclick="go('detail',1)">
+        <div class="card-img"><img src="https://images.unsplash.com/photo-1562883676-8c7feb83f09b?w=400&h=300&fit=crop" onerror="this.style.display='none'"><div class="card-badge left">31% capacity</div><div class="card-badge right">91% match</div></div>
+        <div class="card-info"><div class="row"><span class="name">Gràcia</span><span class="star"><svg viewBox="0 0 12 12" fill="#222"><path d="M6 0l1.76 3.57L12 4.14 8.88 7.02l.74 4.32L6 9.27 2.38 11.34l.74-4.32L0 4.14l4.24-.57z"/></svg><b>4.87</b><span class="count">(1,923)</span></span></div><div class="tagline">The village within the city</div><div class="meta">12 min by metro · <span class="savings">35% cheaper stays</span></div></div>
+      </div>
+      <div class="tab-bar">
+        <div class="tab active" onclick="go('home')"><svg viewBox="0 0 24 24" fill="none" stroke="#FF385C" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg><span style="color:#FF385C">Explore</span></div>
+        <div class="tab" onclick="go('explore')"><svg viewBox="0 0 24 24" fill="none" stroke="#717171" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg><span>Discover</span></div>
+        <div class="tab" onclick="go('map')"><svg viewBox="0 0 24 24" fill="none" stroke="#717171" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg><span>Map</span></div>
+        <div class="tab" onclick="go('ar')"><svg viewBox="0 0 24 24" fill="none" stroke="#717171" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span>AR Guide</span></div>
+      </div>
+    </div>
+
+    <!-- EXPLORE -->
+    <div class="screen" id="s-explore">
+      <div class="status"><span>9:41</span><span>⚡</span></div>
+      <div style="padding:6px 24px 12px"><div style="font-size:26px;font-weight:800;color:#222">Discover Barcelona</div><div style="font-size:14px;color:#717171;margin-top:4px">Sustainable alternatives to overcrowded hotspots</div></div>
+      <div class="filters"><span class="active">All</span><span>Low crowd</span><span>Heritage</span><span>Food</span><span>Art</span></div>
+      <div class="list-item" onclick="go('detail',0)"><div class="thumb"><img src="https://images.unsplash.com/photo-1583422409516-2895a77efded?w=200&h=200&fit=crop" onerror="this.style.display='none'"></div><div class="info"><div class="row"><span class="name">Poblenou</span><span class="star"><svg viewBox="0 0 12 12" fill="#222" width="12" height="12"><path d="M6 0l1.76 3.57L12 4.14 8.88 7.02l.74 4.32L6 9.27 2.38 11.34l.74-4.32L0 4.14l4.24-.57z"/></svg><b>4.91</b></span></div><div class="tagline">Barcelona's creative district</div><div style="margin-top:6px" class="crowd-badge"><span class="dot" style="background:#008A05"></span><span style="color:#008A05">23% · Low crowd</span></div><div class="meta">15 min by metro · <span class="savings">40% cheaper dining</span></div></div></div>
+      <div class="list-item" onclick="go('detail',1)"><div class="thumb"><img src="https://images.unsplash.com/photo-1562883676-8c7feb83f09b?w=200&h=200&fit=crop" onerror="this.style.display='none'"></div><div class="info"><div class="row"><span class="name">Gràcia</span><span class="star"><svg viewBox="0 0 12 12" fill="#222" width="12" height="12"><path d="M6 0l1.76 3.57L12 4.14 8.88 7.02l.74 4.32L6 9.27 2.38 11.34l.74-4.32L0 4.14l4.24-.57z"/></svg><b>4.87</b></span></div><div class="tagline">The village within the city</div><div style="margin-top:6px" class="crowd-badge"><span class="dot" style="background:#008A05"></span><span style="color:#008A05">31% · Low crowd</span></div><div class="meta">12 min by metro · <span class="savings">35% cheaper stays</span></div></div></div>
+      <div class="list-item" onclick="go('detail',2)"><div class="thumb"><img src="https://images.unsplash.com/photo-1523531294919-4bcd7c65ef8e?w=200&h=200&fit=crop" onerror="this.style.display='none'"></div><div class="info"><div class="row"><span class="name">Sant Andreu</span><span class="star"><svg viewBox="0 0 12 12" fill="#222" width="12" height="12"><path d="M6 0l1.76 3.57L12 4.14 8.88 7.02l.74 4.32L6 9.27 2.38 11.34l.74-4.32L0 4.14l4.24-.57z"/></svg><b>4.93</b></span></div><div class="tagline">Hidden heritage quarter</div><div style="margin-top:6px" class="crowd-badge"><span class="dot" style="background:#008A05"></span><span style="color:#008A05">12% · Low crowd</span></div><div class="meta">20 min by metro · <span class="savings">50% cheaper stays</span></div></div></div>
+      <div class="list-item" onclick="go('detail',3)"><div class="thumb"><img src="https://images.unsplash.com/photo-1464790719320-516ecd75af6c?w=200&h=200&fit=crop" onerror="this.style.display='none'"></div><div class="info"><div class="row"><span class="name">El Born</span><span class="star"><svg viewBox="0 0 12 12" fill="#222" width="12" height="12"><path d="M6 0l1.76 3.57L12 4.14 8.88 7.02l.74 4.32L6 9.27 2.38 11.34l.74-4.32L0 4.14l4.24-.57z"/></svg><b>4.85</b></span></div><div class="tagline">Culture meets gastronomy</div><div style="margin-top:6px" class="crowd-badge"><span class="dot" style="background:#E07912"></span><span style="color:#E07912">38% · Moderate</span></div><div class="meta">8 min walk · <span class="savings">25% cheaper dining</span></div></div></div>
+      <div class="tab-bar">
+        <div class="tab" onclick="go('home')"><svg viewBox="0 0 24 24" fill="none" stroke="#717171" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg><span>Explore</span></div>
+        <div class="tab active" onclick="go('explore')"><svg viewBox="0 0 24 24" fill="none" stroke="#FF385C" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg><span style="color:#FF385C">Discover</span></div>
+        <div class="tab" onclick="go('map')"><svg viewBox="0 0 24 24" fill="none" stroke="#717171" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg><span>Map</span></div>
+        <div class="tab" onclick="go('ar')"><svg viewBox="0 0 24 24" fill="none" stroke="#717171" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span>AR Guide</span></div>
+      </div>
+    </div>
+
+    <!-- DETAIL -->
+    <div class="screen" id="s-detail">
+      <div class="detail-hero"><img id="detail-img" src="" onerror="this.style.display='none'"><button class="back-btn" onclick="go('explore')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#222" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg></button></div>
+      <div class="detail-body">
+        <div class="row" style="display:flex;justify-content:space-between;align-items:flex-start"><div><h1 id="detail-name"></h1><div class="tagline" id="detail-tagline"></div></div><span class="star" id="detail-star"></span></div>
+        <div class="desc" id="detail-desc"></div>
+        <div class="stats-row"><div class="stat"><div class="val" id="detail-crowd"></div><div class="label">Crowd level</div></div><div class="stat"><div class="val" id="detail-match" style="color:#FF385C"></div><div class="label">AI match</div></div><div class="stat"><div class="val" id="detail-dist"></div><div class="label">Distance</div></div></div>
+        <div class="tag-row" id="detail-tags"></div>
+        <div class="sdg-box"><div class="title"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>SDG 11 impact</div><div class="text" id="detail-sdg"></div></div>
+        <div class="btn-row"><div class="btn outline" onclick="go('ar')">AR tour</div><div class="btn primary">Explore area</div></div>
+      </div>
+    </div>
+
+    <!-- MAP -->
+    <div class="screen" id="s-map">
+      <div class="status"><span>9:41</span><span>⚡</span></div>
+      <div style="padding:6px 24px 12px"><div style="font-size:22px;font-weight:700;color:#222">Live heatmap</div><div style="font-size:14px;color:#717171">Real-time crowd density from IoT sensors</div></div>
+      <div id="map-container"><div id="barcelona-map"></div></div>
+      <div class="map-legend">
+        <div class="row"><div class="item"><div class="dot" style="background:#FF385C"></div>Overcrowded</div><div class="item"><div class="dot" style="background:#E07912"></div>Busy</div><div class="item"><div class="dot" style="background:#008A05"></div>Recommended</div></div>
+        <div class="map-iot">IoT sensors refreshing every 30s · <b>3 areas recommended</b></div>
+      </div>
+      <div class="tab-bar">
+        <div class="tab" onclick="go('home')"><svg viewBox="0 0 24 24" fill="none" stroke="#717171" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg><span>Explore</span></div>
+        <div class="tab" onclick="go('explore')"><svg viewBox="0 0 24 24" fill="none" stroke="#717171" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg><span>Discover</span></div>
+        <div class="tab active" onclick="go('map')"><svg viewBox="0 0 24 24" fill="none" stroke="#FF385C" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg><span style="color:#FF385C">Map</span></div>
+        <div class="tab" onclick="go('ar')"><svg viewBox="0 0 24 24" fill="none" stroke="#717171" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span>AR Guide</span></div>
+      </div>
+    </div>
+
+    <!-- AR -->
+    <div class="screen" id="s-ar">
+      <div class="status"><span>9:41</span><span>⚡</span></div>
+      <div style="padding:6px 24px 12px"><div style="font-size:22px;font-weight:700;color:#222">AR cultural guide</div><div style="font-size:14px;color:#717171">Point your camera at landmarks</div></div>
+      <div class="ar-viewport">
+        <div class="cam-bg"><div class="frame"><div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div></div></div>
+        <div class="ar-badge"><div class="dot"></div>AR Active</div>
+        <div class="ar-info"><h3>Palau de la Música Catalana</h3><p>UNESCO World Heritage · 1908</p><div class="tags"><span style="background:rgba(255,255,255,.15);color:#fff">Heritage site</span><span style="background:rgba(0,138,5,.3);color:#86efac">18% capacity</span></div></div>
+      </div>
+      <div class="heritage-list">
+        <h3>Nearby heritage points</h3>
+        <div class="heritage-item"><div><div class="name">Palau de la Música</div><div class="type">UNESCO Heritage</div></div><span class="crowd-badge"><span class="dot" style="background:#008A05"></span><span style="color:#008A05">18% · Low crowd</span></span></div>
+        <div class="heritage-item"><div><div class="name">Mercat de Santa Caterina</div><div class="type">Historic market</div></div><span class="crowd-badge"><span class="dot" style="background:#008A05"></span><span style="color:#008A05">22% · Low crowd</span></span></div>
+        <div class="heritage-item"><div><div class="name">Basílica Santa Maria del Mar</div><div class="type">Gothic basilica</div></div><span class="crowd-badge"><span class="dot" style="background:#008A05"></span><span style="color:#008A05">15% · Low crowd</span></span></div>
+      </div>
+      <div class="tab-bar">
+        <div class="tab" onclick="go('home')"><svg viewBox="0 0 24 24" fill="none" stroke="#717171" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg><span>Explore</span></div>
+        <div class="tab" onclick="go('explore')"><svg viewBox="0 0 24 24" fill="none" stroke="#717171" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg><span>Discover</span></div>
+        <div class="tab" onclick="go('map')"><svg viewBox="0 0 24 24" fill="none" stroke="#717171" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg><span>Map</span></div>
+        <div class="tab active" onclick="go('ar')"><svg viewBox="0 0 24 24" fill="none" stroke="#FF385C" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span style="color:#FF385C">AR Guide</span></div>
+      </div>
+    </div>
+
+  </div>
+  <div class="home-bar"></div>
+</div>
+
+<div class="nav-btns">
+  <button class="active" onclick="go('home')">Home</button>
+  <button onclick="go('explore')">Discover</button>
+  <button onclick="go('map')">Heatmap</button>
+  <button onclick="go('ar')">AR Guide</button>
+</div>
+
+<script>
+var destinations=[
+  {name:"Poblenou",tagline:"Barcelona's creative district",desc:"Street art, indie cafés, and a thriving local scene — discover the real Barcelona away from the crowds.",crowd:23,match:94,distance:"15 min",transport:"metro",img:"https://images.unsplash.com/photo-1583422409516-2895a77efded?w=400&h=300&fit=crop",tags:["Art","Cafés","Local life"],savings:"40% cheaper dining",rating:4.91,reviews:2847},
+  {name:"Gràcia",tagline:"The village within the city",desc:"Bohemian plazas, artisan shops, and authentic Catalan neighbourhood life that tourists rarely see.",crowd:31,match:91,distance:"12 min",transport:"metro",img:"https://images.unsplash.com/photo-1562883676-8c7feb83f09b?w=400&h=300&fit=crop",tags:["Bohemian","Markets","Plazas"],savings:"35% cheaper stays",rating:4.87,reviews:1923},
+  {name:"Sant Andreu",tagline:"Hidden heritage quarter",desc:"Medieval streets and local festivals untouched by mass tourism — a true neighbourhood experience.",crowd:12,match:87,distance:"20 min",transport:"metro",img:"https://images.unsplash.com/photo-1523531294919-4bcd7c65ef8e?w=400&h=300&fit=crop",tags:["Heritage","Quiet","Festivals"],savings:"50% cheaper stays",rating:4.93,reviews:412},
+  {name:"El Born",tagline:"Culture meets gastronomy",desc:"Picasso Museum surroundings, tapas bars, and medieval architecture just steps from the beaten path.",crowd:38,match:85,distance:"8 min",transport:"walk",img:"https://images.unsplash.com/photo-1464790719320-516ecd75af6c?w=400&h=300&fit=crop",tags:["Museums","Food","History"],savings:"25% cheaper dining",rating:4.85,reviews:3201}
+];
+
+var mapInited=false;
+function go(screen,idx){
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active')});
+  document.querySelectorAll('.nav-btns button').forEach(function(b){b.classList.remove('active')});
+  if(screen==='detail'&&idx!==undefined){
+    var d=destinations[idx];
+    document.getElementById('detail-img').src=d.img;
+    document.getElementById('detail-name').textContent=d.name;
+    document.getElementById('detail-tagline').textContent=d.tagline;
+    document.getElementById('detail-desc').textContent=d.desc;
+    document.getElementById('detail-crowd').textContent=d.crowd+'%';
+    document.getElementById('detail-crowd').style.color=d.crowd<30?'#008A05':'#E07912';
+    document.getElementById('detail-match').textContent=d.match+'%';
+    document.getElementById('detail-dist').textContent=d.distance;
+    document.getElementById('detail-star').innerHTML='<svg viewBox="0 0 12 12" fill="#222" width="12" height="12"><path d="M6 0l1.76 3.57L12 4.14 8.88 7.02l.74 4.32L6 9.27 2.38 11.34l.74-4.32L0 4.14l4.24-.57z"/></svg><b>'+d.rating+'</b><span class="count">('+d.reviews.toLocaleString()+')</span>';
+    var tagsHtml=d.tags.map(function(t){return '<span>'+t+'</span>'}).join('')+'<span class="green">'+d.savings+'</span>';
+    document.getElementById('detail-tags').innerHTML=tagsHtml;
+    document.getElementById('detail-sdg').textContent='By visiting '+d.name+', you help redistribute tourist flows away from overcrowded hotspots. This supports sustainable urban-rural linkages (Target 11.a) and helps protect cultural heritage (Target 11.4).';
+  }
+  document.getElementById('s-'+screen).classList.add('active');
+  var btnMap={home:0,explore:1,map:2,ar:3};
+  if(btnMap[screen]!==undefined)document.querySelectorAll('.nav-btns button')[btnMap[screen]].classList.add('active');
+  document.querySelector('.screen-wrap').scrollTop=0;
+  if(screen==='map'&&!mapInited){
+    setTimeout(initMap,100);
+    mapInited=true;
+  }
+}
+
+function initMap(){
+  var map=L.map('barcelona-map',{zoomControl:false,attributionControl:true}).setView([41.3874,2.1686],13);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
+    attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:19
+  }).addTo(map);
+  var zones=[
+    {lat:41.3797,lng:2.1746,name:"La Rambla",crowd:92,r:500,color:"#FF385C"},
+    {lat:41.3834,lng:2.1761,name:"Gothic Quarter",crowd:81,r:400,color:"#FF385C"},
+    {lat:41.4036,lng:2.1744,name:"Sagrada Família",crowd:87,r:450,color:"#E07912"},
+    {lat:41.4034,lng:2.1987,name:"Poblenou",crowd:23,r:600,color:"#008A05"},
+    {lat:41.4025,lng:2.1566,name:"Gràcia",crowd:31,r:500,color:"#008A05"},
+    {lat:41.4353,lng:2.1895,name:"Sant Andreu",crowd:12,r:500,color:"#008A05"}
+  ];
+  zones.forEach(function(z){
+    L.circle([z.lat,z.lng],{radius:z.r,color:z.color,fillColor:z.color,fillOpacity:0.2,weight:2,opacity:0.7}).addTo(map).bindPopup('<b>'+z.name+'</b><br>'+z.crowd+'% capacity');
+    L.marker([z.lat,z.lng],{icon:L.divIcon({className:'',html:'<div style="background:'+z.color+';color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;font-family:-apple-system,sans-serif;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.3)">'+z.name+' '+z.crowd+'%</div>',iconSize:[0,0],iconAnchor:[40,-10]})}).addTo(map);
+  });
+  setTimeout(function(){map.invalidateSize()},200);
+}
+</script>
+</body>
+</html>
